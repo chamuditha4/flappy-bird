@@ -17,42 +17,46 @@ const ADD = 0x6a, SUB = 0x6b, MUL = 0x6c, AND = 0x71, SHL = 0x74, SHRU = 0x76,
 // if (cond) unreachable  ->  host reboots the instance (our `jmp start`)
 const DIE = [0x04, 0x40, 0x00, 0x0b];
 
-// globals: 0 = bird y, 1 = velocity, 2 = pipe x, 3 = score (exported, host shows it)
-// locals:  0 = flap key, 1 = pixel, 2 = x, 3 = y, 4 = y - bird y, 5 = pipe?, 6 = bird?
-const SKY = 0xFFCEC570 | 0, PIPE = 0xFF2EBF73 | 0, BIRD = 0xFF30E0F8 | 0;
+// globals: 0 = bird y, 1 = velocity, 2 = pipe x*4, 3 = score
+// locals:  0 = flap key, 1 = pixel byte address, 2 = x*4, 3 = y - bird y, 4 = pipe?, 5 = bird?
+// The host calls f(DOT) once for the start screen: a non-zero key flaps, and
+// the pixel at byte address DOT turns into the "press a key" dot.
+const DOT = 64 * 512 + 64 * 4;                  // centre of the screen
+const SKY = 0xFFF0C870 | 0, PIPE = 0xFF2EBF73 | 0, BIRD = 0xFF30E0F8 | 0;
+const OR = 0x72, LEU = 0x4d;
 
 const body = [
-  1, 6, 0x7f,                                   // 6 more i32 locals
+  1, 5, 0x7f,                                   // 5 more i32 locals
 
   // vy = key ? -5 : vy+1 ;  by += vy
   c(-5), gget(1), c(1), ADD, get(0), SELECT, gset(1),
   gget(0), gget(1), ADD, gset(0),
-  // px = (px-2)&127 ; score += (px==126) -> pipe wrapped, new one spawned
-  gget(2), c(2), SUB, c(127), AND, gset(2),
-  gget(3), gget(2), c(126), EQ, ADD, gset(3),
-  // off the top or bottom of the screen: dead (negative wraps to huge unsigned)
-  gget(0), c(121), GTU, DIE,
+  // px = (px-8)&511 ; score += (px==0) -> pipe left the screen, a new one enters
+  gget(2), c(8), SUB, c(511), AND, gset(2),
+  gget(3), gget(2), EQZ, ADD, gset(3),
 
-  0x03, 0x40,                                   // loop over all 16384 pixels
-    get(1), c(127), AND, set(2),                //   x = i & 127
-    get(1), c(7), SHRU, set(3),                 //   y = i >> 7
-    // pipe: ((x-px)&127) < 12  &&  (y-gap) > 44 (unsigned: above gap wraps)
+  0x03, 0x40,                                   // loop over all 16384 pixels, 4 bytes each
+    get(1), c(511), AND, set(2),                //   x*4 = i & 511, y = i >> 9
+    // pipe: ((px-x)&511) < 48  &&  (y-gap) > 44 (unsigned: above gap wraps)
     // gap top = (score*29)&63
-    get(2), gget(2), SUB, c(127), AND, c(12), LTU,
-    get(3), gget(3), c(29), MUL, c(63), AND, SUB, c(44), GTU, AND, set(5),
-    // bird: 6x6 box at x=30, y=by
-    get(2), c(30), SUB, c(6), LTU,
-    get(3), gget(0), SUB, tee(4), c(6), LTU, AND, set(6),
-    // bird overlapping pipe: dead
-    get(5), get(6), AND, DIE,
-    // mem[i*4] = eye ? 0 : bird ? BIRD : pipe ? PIPE : SKY
-    // (0 has alpha 0, so the eye is see-through to the dark page behind)
-    get(1), c(2), SHL,
-    c(0), c(BIRD), c(PIPE), c(SKY), get(5), SELECT, get(6), SELECT,
-    get(2), c(34), EQ, get(4), c(1), EQ, AND, SELECT,
+    gget(2), get(2), SUB, c(511), AND, c(48), LTU,
+    get(1), c(9), SHRU, gget(3), c(29), MUL, c(63), AND, SUB, c(44), GTU, AND, tee(4),
+    // bird: 6x6 box at x=10, y=by
+    get(2), c(40), SUB, c(24), LTU,
+    get(1), c(9), SHRU, gget(0), SUB, tee(3), c(6), LTU, AND, tee(5),
+    // dead if the bird touches a pipe or leaves the screen (negative is huge unsigned)
+    AND, gget(0), c(121), GTU, OR, DIE,
+    // mem[i] = eye|score|dot ? 0 : bird ? BIRD : pipe ? PIPE : SKY
+    // (0 has alpha 0, so those pixels show the dark page behind)
+    get(1),
+    c(0), c(BIRD), c(PIPE), c(SKY), get(4), SELECT, get(5), SELECT,
+    get(2), c(56), EQ, get(3), c(1), EQ, AND,   //   eye
+    get(1), gget(3), c(5), SHL, LEU, OR,        //   score bar along the top, 8px a point
+    get(1), get(0), EQ, OR,                     //   start screen dot
+    SELECT,
     0x36, 2, 0,
-    // while (++i >> 14 == 0)
-    get(1), c(1), ADD, tee(1), c(14), SHRU, EQZ, 0x0d, 0,
+    // while ((i += 4) >> 16 == 0)
+    get(1), c(4), ADD, tee(1), c(16), SHRU, EQZ, 0x0d, 0,
   0x0b,
   0x0b,                                         // end of function
 ].flat();
@@ -65,7 +69,7 @@ const wasm = [
   sec(6, 4,                                     // globals (all mutable i32)
       0x7f, 1, c(20), 0x0b,                     //   by (starts inside the first gap)
       0x7f, 1, c(0), 0x0b,                      //   vy
-      0x7f, 1, c(60), 0x0b,                     //   px
+      0x7f, 1, c(0), 0x0b,                      //   px (just off the right edge)
       0x7f, 1, c(0), 0x0b),                     //   score
   sec(7, 3, 1, 0x6d, 2, 0, 1, 0x66, 0, 0, 1, 0x73, 3, 3), // m, f, s
   sec(10, 1, u(body.length), body),
@@ -89,11 +93,7 @@ const boot = async () => {
   run = 0;   // wait on the start screen
   e = (await WebAssembly.instantiate(wasm)).instance.exports;
   img = new ImageData(new Uint8ClampedArray(e.m.buffer, 0, 65536), 128, 128);
-  e.f(0); draw();
-  ctx.font = 'bold 14px monospace'; ctx.textAlign = 'center';
-  ctx.fillStyle = '#fff'; ctx.strokeStyle = '#000'; ctx.lineWidth = 3;
-  for (const [s, y] of [['FLAPPY 256', 90], ['press any key', 110]])
-    ctx.strokeText(s, 64, y, 124), ctx.fillText(s, 64, y, 124);
+  e.f(${DOT}); draw();   // start screen: frozen frame with a dot
 };
 onkeydown = onpointerdown = ev => { k = !ev.repeat; run = 1; };
 boot();
