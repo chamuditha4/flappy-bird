@@ -1,12 +1,12 @@
 <!doctype html>
-<title>0</title>
+<title>flappy 256</title>
 <body style="margin:0;background:#222">
 <canvas id=c width=128 height=128 style="width:512px;image-rendering:pixelated">
 <script>
 // the 256-byte part is flappy.wasm; this is only the keyboard + canvas glue
 let k = 0, run = 0, e, img, ctx = c.getContext('2d');
-const wasm = Uint8Array.from(atob('AGFzbQEAAAABBQFgAX8AAwIBAAUDAQABBhUEfwFBFAt/AUEAC38BQQALfwFBAAsHDQMBbQIAAWYAAAFzAwMKvwEBvAEBBX9BeyMBQQFqIAAbJAEjACMBaiQAIwJBCGtB/wNxJAIjAyMCRWokAwNAIAFB/wNxIQIjAiACa0H/A3FBMEkgAUEJdiMDQR1sQT9xa0EsS3EiBCACQShrQRhJIAFBCXYjAGsiA0EGSXEiBXEjAEH5AEtyBEAACyABQQBB+MHDeUHz/rp5QfCQQyAEGyAFGyACQThGIANBAUZxIAEjA0EFdE1yIAEgAEZyGzYCACABQQRqIgFBEHZFDQALCw=='), c => c.charCodeAt());
-const draw = () => { ctx.putImageData(img, 0, 0); document.title = e.s.value; };
+const wasm = Uint8Array.from(atob('AGFzbQEAAAABBQFgAX8AAwIBAAUDAQABBhEDfwFBqDwLfwFBAAt/AUEACwcJAgFtAgABZgAACscBAcQBAQV/QYBsIwFBgARqIAAbJAEjACMBaiQAIwJBCGokAgNAIwIgAWpB/wNxQc8DSyABQQl2IwJBCXZBHWxBP3FrQSxLcSIEIAEjAGsiA0HgY3FFIgVxIwBBqOADS3IEQAALIAFBAEH4wcN5QfP+unlB8JBDIAFBCXZqIwJBAnYgAWpB/wFxIgIgAkH/AXNsIAFqQYDgA0t2IAQbIAUbIANBlAhGIAEjAkEEdk1yIAEgAEZyGzYCACABQQRqIgFBEHZFDQALCw=='), c => c.charCodeAt());
+const draw = () => ctx.putImageData(img, 0, 0);
 const boot = async () => {
   run = 0;   // wait on the start screen
   e = (await WebAssembly.instantiate(wasm)).instance.exports;
