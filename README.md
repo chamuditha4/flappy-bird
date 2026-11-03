@@ -1,5 +1,11 @@
 # flappy bird in 256 bytes (WebAssembly)
 
+**[▶ Play it here](https://chamuditha4.github.io/flappy-bird/)**
+
+[![screenshot](screenshot.png)](https://chamuditha4.github.io/flappy-bird/)
+
+GitHub strips scripts from READMEs, so the game can't run inline. The link above opens the same `index.html` on GitHub Pages.
+
 The whole game is `flappy.wasm`, hand-assembled to exactly 256 bytes. It shows a start screen, and any key or click flaps. Dying reboots to the start screen. The score is in the tab title.
 
     node build.js          # writes flappy.wasm and index.html
