@@ -25,7 +25,7 @@ Tricks, borrowed from hill-climb-1024:
 - **Collision uses the rendering.** The bird and pipe flags are `tee`d straight into an `and` in the draw loop. There is no separate hit test.
 - **Off-screen is one unsigned compare.** `by > 121` catches both top and bottom, because negative values wrap to huge unsigned. It is OR'd into the collision test, so one trap serves both.
 - **Death is `unreachable`.** The trap throws, and the host reboots a fresh instance. That is the wasm version of `jmp start`.
-- **Scoring is `eqz`.** A point is added when the pipe x hits 0, which happens just after the pipe leaves the screen. The gap moves at that moment, while the new pipe is still off to the right.
+- **Scoring is `eqz`.** A point is added when the pipe x hits 0, just as the pipe clears the bird. The gap moves at that moment, so it visibly jumps on the right edge, where the pipe is wrapping back in, but never near the bird.
 - **Dark pixels are transparent.** Colour `0` costs 2 bytes and has alpha 0, so the dark page shows through. The eye, the score bar and the start dot all share that one `select`.
 - **The score bar is one compare.** `i <= score << 5`. Past 16 points it wraps onto the next row.
 - **The start dot is the key.** The host calls `f(DOT)` once, where `DOT` is the byte address of the screen centre. Any non-zero key flaps, so physics still runs, and `i == key` lights that one pixel. In play the key is 0 or 1, and those addresses are already covered by the score bar. That costs 6 bytes.
