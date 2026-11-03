@@ -2,7 +2,7 @@
 
 **[▶ Play it here](https://chamuditha4.github.io/flappy-bird/)**
 
-[![screenshot](screenshot.png)](https://chamuditha4.github.io/flappy-bird/)
+<a href="https://chamuditha4.github.io/flappy-bird/"><img src="screenshot-start.png" width="320" alt="start screen"> <img src="screenshot.png" width="320" alt="gameplay"></a>
 
 GitHub strips scripts from READMEs, so the game can't run inline. The link above opens the same `index.html` on GitHub Pages.
 
