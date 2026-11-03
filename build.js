@@ -19,13 +19,13 @@ const DIE = [0x04, 0x40, 0x00, 0x0b];
 
 // globals: 0 = bird position as a pixel byte address (y*512 + 40), 1 = velocity,
 //          2 = distance flown (8 per tick; score = distance >> 9)
-// locals:  0 = flap key, 1 = pixel byte address i, 2 = hill phase, 3 = i - bird,
+// locals:  0 = flap key, 1 = pixel byte address i, 2 = mountain phase, 3 = i - bird,
 //          4 = pipe?, 5 = bird?
 // The host calls f(DOT) once for the start screen: a non-zero key flaps, and
 // the pixel at byte address DOT turns into the "press a key" dot.
 const DOT = 64 * 512 + 64 * 4;                  // centre of the screen
 const SKY = 0xFFF0C870 | 0, PIPE = 0xFF2EBF73 | 0, BIRD = 0xFF30E0F8 | 0;
-const OR = 0x72, XOR = 0x73, LEU = 0x4d;
+const OR = 0x72, XOR = 0x73, LEU = 0x4d, SHRS = 0x75, EXT8S = 0xc0;
 
 const body = [
   1, 5, 0x7f,                                   // 5 more i32 locals
@@ -44,26 +44,28 @@ const body = [
     // bird: 8x8 box. r = i - bird has dy in bits 9-11 and dx*4 in bits 0-4,
     // so it is the bird exactly when every other bit is clear
     get(1), gget(0), SUB, tee(3), c(~0xE1F), AND, EQZ, tee(5),
-    // dead if the bird touches a pipe or leaves the screen (negative is huge unsigned)
-    AND, gget(0), c(120 * 512 + 40), GTU, OR, DIE,
-    // mem[i] = eye|score|dot ? 0 : bird ? BIRD : pipe ? PIPE : hill ? sky>>1 : sky
+    // dead if the bird touches a pipe or leaves the screen: bird >> 16 is
+    // non-zero above the top (negative) and below the bottom (past 64 KiB)
+    AND, gget(0), c(16), SHRU, OR, DIE,
+    // mem[i] = eye|score|dot ? 0 : bird ? BIRD : pipe ? PIPE : mountain ? sky>>1 : sky
     // (0 has alpha 0, so those pixels show the dark page behind)
     get(1),
     c(0), c(BIRD), c(PIPE),
     //   sky gets redder towards the horizon: red += y
     c(SKY), get(1), c(9), SHRU, ADD,
-    //   hills: w = (distance/4 + i) & 255 scrolls at 1/4 pipe speed,
-    //   hill if i + w*(255-w) > row 120. sky>>1 halves alpha and colour: a dark blue
-    gget(2), c(2), SHRU, get(1), ADD, c(255), AND, tee(2), get(2), c(255), XOR, MUL,
-    get(1), ADD, c(120 * 512), GTU, SHRU,
+    //   mountains: s = signed low byte of (distance/4 + i), scrolling at 1/4 pipe
+    //   speed; |s| ~ s ^ (s >> 31) is a triangle wave. mountain if i - |s|*128
+    //   is below row 88. sky>>1 halves alpha and colour: a dark blue
+    get(1), gget(2), c(2), SHRU, get(1), ADD, EXT8S, tee(2), get(2), c(31), SHRS, XOR,
+    c(7), SHL, SUB, c(88 * 512), 0x4a, SHRU,  // 0x4a: signed >, or the top rows wrap
     get(4), SELECT, get(5), SELECT,
     get(3), c(2 * 512 + 5 * 4), EQ,             //   eye
     get(1), gget(2), c(4), SHRU, LEU, OR,       //   distance bar along the top, 8px a pipe
     get(1), get(0), EQ, OR,                     //   start screen dot
     SELECT,
     0x36, 2, 0,
-    // while ((i += 4) >> 16 == 0)
-    get(1), c(4), ADD, tee(1), c(16), SHRU, EQZ, 0x0d, 0,
+    // while ((i += 4) << 16): only zero once i reaches 65536
+    get(1), c(4), ADD, tee(1), c(16), SHL, 0x0d, 0,
   0x0b,
   0x0b,                                         // end of function
 ].flat();
@@ -74,10 +76,10 @@ const wasm = [
   sec(3, 1, 0),                                 // one function
   sec(5, 1, 0, 1),                              // 1 page of memory = 128x128 RGBA
   sec(6, 3,                                     // globals (all mutable i32)
-      0x7f, 1, c(15 * 512 + 40), 0x0b,          //   bird (starts inside the first gap)
+      0x7f, 1, c(30 * 512 + 40), 0x0b,          //   bird (starts inside the first gap)
       0x7f, 1, c(0), 0x0b,                      //   vy
       0x7f, 1, c(0), 0x0b),                     //   distance (first pipe at the right edge)
-  sec(7, 2, 1, 0x6d, 2, 0, 1, 0x66, 0, 0),      // m, f
+  sec(7, 2, 0, 2, 0, 1, 0x66, 0, 0),            // memory as "", f
   sec(10, 1, u(body.length), body),
 ].flat();
 
@@ -98,7 +100,7 @@ const draw = () => ctx.putImageData(img, 0, 0);
 const boot = async () => {
   run = 0;   // wait on the start screen
   e = (await WebAssembly.instantiate(wasm)).instance.exports;
-  img = new ImageData(new Uint8ClampedArray(e.m.buffer, 0, 65536), 128, 128);
+  img = new ImageData(new Uint8ClampedArray(e[''].buffer, 0, 65536), 128, 128);
   e.f(${DOT}); draw();   // start screen: frozen frame with a dot
 };
 onkeydown = onpointerdown = ev => { k = !ev.repeat; run = 1; };
