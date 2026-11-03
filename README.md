@@ -6,7 +6,7 @@
 
 GitHub strips scripts from READMEs, so the game can't run inline. The link above opens the same `index.html` on GitHub Pages.
 
-The whole game is `flappy.wasm`, hand-assembled to 252 bytes. It starts paused with a dot in the middle of the screen. Press any key or click to flap. The dark bar along the top is your distance, 8 pixels per pipe. Behind the pipes is a sky that fades to pink at the horizon, with mountains scrolling at a quarter of the pipe speed. Dying reboots to the start screen.
+The whole game is `flappy.wasm`, hand-assembled to 253 bytes. It starts paused with a dot in the middle of the screen. Press any key or click to flap. The dark bar along the top is your distance, 8 pixels per pipe. Behind the pipes is a sky that fades to pink at the horizon, with mountains scrolling at a quarter of the pipe speed. Dying reboots to the start screen.
 
     node build.js          # writes flappy.wasm and index.html
     open index.html        # wasm is inlined as base64, so file:// works

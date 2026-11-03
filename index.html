@@ -5,7 +5,7 @@
 <script>
 // the 256-byte part is flappy.wasm; this is only the keyboard + canvas glue
 let k = 0, run = 0, e, img, ctx = c.getContext('2d');
-const wasm = Uint8Array.from(atob('AGFzbQEAAAABBQFgAX8AAwIBAAUDAQABBhIDfwFBqPgAC38BQQALfwFBAAsHCAIAAgABZgAACsMBAcABAQV/QYBsIwFBgARqIAAbJAEjACMBaiQAIwJBCGokAgNAIwIgAWpB/wNxQc8DSyABQQl2IwJBCXZBHWxBP3FrQSxLcSIEIAEjAGsiA0HgY3FFIgVxIwBBEHZyBEAACyABQQBB+MHDeUHz/rp5QfCQQyABQQl2aiABIwJBAnYgAWrAIgIgAkEfdXNBB3RrQYDgAkp2IAQbIAUbIANBlAhGIAEjAkEEdk1yIAEgAEZyGzYCACABQQRqIgFBEHQNAAsL'), c => c.charCodeAt());
+const wasm = Uint8Array.from(atob('AGFzbQEAAAABBQFgAX8AAwIBAAUDAQABBhMDfwFBqNABC38BQQALfwFBgAQLBwgCAAIAAWYAAArDAQHAAQEFf0GAbCMBQYAEaiAAGyQBIwAjAWokACMCQQhqJAIDQCMCIAFqQf8DcUHPA0sgAUEJdiMCQQl2QR1sQT9xa0EsS3EiBCABIwBrIgNB4GNxRSIFcSMAQRB2cgRAAAsgAUEAQfjBw3lB8/66eUHwkEMgAUEJdmogASMCQQJ2IAFqwCICIAJBH3VzQQd0a0GA4AJKdiAEGyAFGyADQZQIRiABIwJBBHZNciABIABGchs2AgAgAUEEaiIBQRB0DQALCw=='), c => c.charCodeAt());
 const draw = () => ctx.putImageData(img, 0, 0);
 const boot = async () => {
   run = 0;   // wait on the start screen

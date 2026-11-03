@@ -76,9 +76,10 @@ const wasm = [
   sec(3, 1, 0),                                 // one function
   sec(5, 1, 0, 1),                              // 1 page of memory = 128x128 RGBA
   sec(6, 3,                                     // globals (all mutable i32)
-      0x7f, 1, c(30 * 512 + 40), 0x0b,          //   bird (starts inside the first gap)
+      0x7f, 1, c(52 * 512 + 40), 0x0b,          //   bird: mid-screen, inside the first gap
       0x7f, 1, c(0), 0x0b,                      //   vy
-      0x7f, 1, c(0), 0x0b),                     //   distance (first pipe at the right edge)
+      0x7f, 1, c(512), 0x0b),                   //   distance: one pipe in, so the first gap
+                                                //   is rows 29-73; pipe at the right edge
   sec(7, 2, 0, 2, 0, 1, 0x66, 0, 0),            // memory as "", f
   sec(10, 1, u(body.length), body),
 ].flat();
